@@ -1,0 +1,20 @@
+{
+  "name": "flutter_cupertino",
+  "version": "1.0.0",
+  "description": "Flutter mobile application",
+  "private": true,
+  "scripts": {
+    "release": "semantic-release --no-ci",
+    "release:dry": "semantic-release --dry-run --no-ci"
+  },
+  "devDependencies": {
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/commit-analyzer": "^11.1.0",
+    "@semantic-release/exec": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^9.2.6",
+    "@semantic-release/release-notes-generator": "^12.1.0",
+    "conventional-changelog-cli": "^5.0.0",
+    "semantic-release": "^23.1.1"
+  }
+}

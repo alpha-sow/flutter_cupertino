@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/alpha-sow/flutter_cupertino/compare/v1.0.1...v1.0.2) (2025-10-24)
+
+
+### Bug Fixes
+
+* update project description for clarity and detail ([02d75c5](https://github.com/alpha-sow/flutter_cupertino/commit/02d75c57eb867bedaed7265dc7e170441d6bf120))
+
 ## [1.0.1](https://github.com/alpha-sow/flutter_cupertino/compare/v1.0.0...v1.0.1) (2025-10-24)
 
 
