@@ -50,3 +50,5 @@ example/scripts
 example/Makefile
 example/package.json
 package.json
+node_modules
+package-lock.json
