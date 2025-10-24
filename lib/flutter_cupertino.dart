@@ -1,0 +1,5 @@
+/// A Very Good Project created by Very Good CLI.
+library;
+
+export 'src/flutter_cupertino.dart';
+export 'src/src.dart';
