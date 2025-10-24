@@ -1,5 +1,6 @@
 import Cocoa
 import FlutterMacOS
+import SwiftUI
 
 class FCSliderFactory: NSObject, FlutterPlatformViewFactory {
   private var messenger: FlutterBinaryMessenger
@@ -26,17 +27,40 @@ class FCSliderFactory: NSObject, FlutterPlatformViewFactory {
   }
 }
 
-class FCSliderView: NSView {
-  private var slider: NSSlider
-  private var channel: FlutterMethodChannel
+// Observable state for slider
+class SliderState: ObservableObject {
+  @Published var value: Double
 
-  private struct SliderStyle {
-    let value: Double
-    let minimumValue: Double
-    let maximumValue: Double
-    let minimumTrackTintColor: NSColor
-    let isContinuous: Bool
+  init(value: Double) {
+    self.value = value
   }
+}
+
+// SwiftUI Slider View
+struct FCSliderSwiftUIView: View {
+  @ObservedObject var state: SliderState
+  let minimumValue: Double
+  let maximumValue: Double
+  let minimumTrackTintColor: Color?
+  let onValueChanged: (Double) -> Void
+
+  var body: some View {
+    Slider(
+      value: $state.value,
+      in: minimumValue...maximumValue
+    )
+    .padding(.horizontal, 16)
+    .accentColor(minimumTrackTintColor ?? .accentColor)
+    .onChange(of: state.value) { newValue in
+      onValueChanged(newValue)
+    }
+  }
+}
+
+class FCSliderView: NSView {
+  private var hostingView: NSHostingView<FCSliderSwiftUIView>
+  private var channel: FlutterMethodChannel
+  private var sliderState: SliderState
 
   init(
     frame: NSRect,
@@ -44,20 +68,56 @@ class FCSliderView: NSView {
     arguments args: Any?,
     binaryMessenger messenger: FlutterBinaryMessenger
   ) {
-    slider = NSSlider()
     channel = FlutterMethodChannel(
       name: "flutter_cupertino/fc_slider_\(viewId)",
       binaryMessenger: messenger
     )
+
+    // Parse arguments
+    var value: Double = 0.5
+    var minimumValue: Double = 0.0
+    var maximumValue: Double = 1.0
+    var minimumTrackTintColor: Color?
+
+    if let args = args as? [String: Any] {
+      value = args["value"] as? Double ?? value
+      minimumValue = args["minimumValue"] as? Double ?? minimumValue
+      maximumValue = args["maximumValue"] as? Double ?? maximumValue
+
+      if let minColorValue = args["minimumTrackTintColor"] as? Int {
+        minimumTrackTintColor = Color(NSColor(argb: minColorValue))
+      }
+    }
+
+    sliderState = SliderState(value: value)
+
+    // Create SwiftUI view
+    let swiftUIView = FCSliderSwiftUIView(
+      state: sliderState,
+      minimumValue: minimumValue,
+      maximumValue: maximumValue,
+      minimumTrackTintColor: minimumTrackTintColor
+    ) { [weak channel] newValue in
+      channel?.invokeMethod("valueChanged", arguments: ["value": newValue])
+    }
+
+    hostingView = NSHostingView(rootView: swiftUIView)
+
     super.init(frame: frame)
 
-    let style = parseArguments(args)
-    configureSlider(with: style)
-    setupLayout()
+    // Add hosting view
+    hostingView.translatesAutoresizingMaskIntoConstraints = false
+    addSubview(hostingView)
+
+    NSLayoutConstraint.activate([
+      hostingView.leadingAnchor.constraint(equalTo: leadingAnchor),
+      hostingView.trailingAnchor.constraint(equalTo: trailingAnchor),
+      hostingView.topAnchor.constraint(equalTo: topAnchor),
+      hostingView.bottomAnchor.constraint(equalTo: bottomAnchor),
+    ])
+
     setupMethodChannel()
   }
-
-  // MARK: - Method Channel Setup
 
   private func setupMethodChannel() {
     channel.setMethodCallHandler {
@@ -70,7 +130,7 @@ class FCSliderView: NSView {
       switch call.method {
       case "updateValue":
         if let value = call.arguments as? Double {
-          self.slider.doubleValue = value
+          self.sliderState.value = value
           result(nil)
         } else {
           result(
@@ -84,84 +144,5 @@ class FCSliderView: NSView {
 
   required init?(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
-  }
-
-  // MARK: - Argument Parsing
-
-  private func parseArguments(_ args: Any?) -> SliderStyle {
-    var value: Double = 0.5
-    var minimumValue: Double = 0.0
-    var maximumValue: Double = 1.0
-    var minimumTrackTintColor = NSColor.controlAccentColor
-    var isContinuous = true
-
-    if let args = args as? [String: Any] {
-      value = args["value"] as? Double ?? value
-      minimumValue = args["minimumValue"] as? Double ?? minimumValue
-      maximumValue = args["maximumValue"] as? Double ?? maximumValue
-
-      if let minColorValue = args["minimumTrackTintColor"] as? Int {
-        minimumTrackTintColor = NSColor(argb: minColorValue)
-      }
-
-      isContinuous = args["isContinuous"] as? Bool ?? isContinuous
-    }
-
-    return SliderStyle(
-      value: value,
-      minimumValue: minimumValue,
-      maximumValue: maximumValue,
-      minimumTrackTintColor: minimumTrackTintColor,
-      isContinuous: isContinuous
-    )
-  }
-
-  // MARK: - Slider Configuration
-
-  private func configureSlider(with style: SliderStyle) {
-    // Set value range
-    slider.minValue = style.minimumValue
-    slider.maxValue = style.maximumValue
-    slider.doubleValue = style.value
-
-    // Set slider type
-    slider.sliderType = .linear
-
-    // Set continuous mode
-    slider.isContinuous = style.isContinuous
-
-    // Set target and action
-    slider.target = self
-    slider.action = #selector(onSliderChanged(_:))
-
-    // Set accessibility
-    slider.setAccessibilityRole(.slider)
-  }
-
-  // MARK: - Layout
-
-  private func setupLayout() {
-    slider.translatesAutoresizingMaskIntoConstraints = false
-    addSubview(slider)
-
-    NSLayoutConstraint.activate([
-      slider.leadingAnchor.constraint(
-        equalTo: leadingAnchor,
-        constant: 16
-      ),
-      slider.trailingAnchor.constraint(
-        equalTo: trailingAnchor,
-        constant: -16
-      ),
-      slider.centerYAnchor.constraint(equalTo: centerYAnchor),
-    ])
-  }
-
-  // MARK: - Actions
-
-  @objc private func onSliderChanged(_ sender: NSSlider) {
-    let value = sender.doubleValue
-    // Notify Flutter about the value change
-    channel.invokeMethod("valueChanged", arguments: ["value": value])
   }
 }

@@ -1,5 +1,6 @@
 import Cocoa
 import FlutterMacOS
+import SwiftUI
 
 class FCSwitchButtonFactory: NSObject, FlutterPlatformViewFactory {
   private var messenger: FlutterBinaryMessenger
@@ -26,19 +27,46 @@ class FCSwitchButtonFactory: NSObject, FlutterPlatformViewFactory {
   }
 }
 
-class FCSwitchButtonView: NSView {
-  private var switchControl: NSSwitch
-  private var titleLabel: NSTextField?
-  private var stackView: NSStackView
-  private var channel: FlutterMethodChannel
-  private var style: SwitchButtonStyle?
+// Observable state for switch
+class SwitchState: ObservableObject {
+  @Published var isOn: Bool
 
-  private struct SwitchButtonStyle {
-    let title: String?
-    let isOn: Bool
-    let onColor: NSColor
-    let isEnabled: Bool
+  init(isOn: Bool) {
+    self.isOn = isOn
   }
+}
+
+// SwiftUI Switch View
+struct FCSwitchSwiftUIView: View {
+  let title: String?
+  @ObservedObject var state: SwitchState
+  let onColor: Color?
+  let isEnabled: Bool
+  let onToggle: (Bool) -> Void
+
+  var body: some View {
+    HStack(spacing: 8) {
+      if let title = title, !title.isEmpty {
+        Text(title)
+          .font(.system(size: 13))
+      }
+
+      Toggle("", isOn: $state.isOn)
+        .labelsHidden()
+        .toggleStyle(SwitchToggleStyle(tint: onColor ?? .accentColor))
+        .disabled(!isEnabled)
+        .onChange(of: state.isOn) { newValue in
+          onToggle(newValue)
+        }
+    }
+    .padding(.horizontal, 16)
+  }
+}
+
+class FCSwitchButtonView: NSView {
+  private var hostingView: NSHostingView<FCSwitchSwiftUIView>
+  private var channel: FlutterMethodChannel
+  private var switchState: SwitchState
 
   init(
     frame: NSRect,
@@ -46,31 +74,15 @@ class FCSwitchButtonView: NSView {
     arguments args: Any?,
     binaryMessenger messenger: FlutterBinaryMessenger
   ) {
-    switchControl = NSSwitch()
-    stackView = NSStackView()
     channel = FlutterMethodChannel(
       name: "flutter_cupertino/fc_switch_button_\(viewId)",
       binaryMessenger: messenger
     )
-    super.init(frame: frame)
 
     // Parse arguments
-    let style = parseArguments(args)
-    self.style = style
-    configureSwitch(with: style)
-    setupLayout()
-  }
-
-  required init?(coder: NSCoder) {
-    fatalError("init(coder:) has not been implemented")
-  }
-
-  // MARK: - Argument Parsing
-
-  private func parseArguments(_ args: Any?) -> SwitchButtonStyle {
     var title: String?
     var isOn = false
-    var onColor = NSColor.controlAccentColor
+    var onColor: Color?
     var isEnabled = true
 
     if let args = args as? [String: Any] {
@@ -78,88 +90,41 @@ class FCSwitchButtonView: NSView {
       isOn = args["isOn"] as? Bool ?? isOn
 
       if let onColorValue = args["onColor"] as? Int {
-        onColor = NSColor(argb: onColorValue)
+        onColor = Color(NSColor(argb: onColorValue))
       }
 
       isEnabled = args["isEnabled"] as? Bool ?? isEnabled
     }
 
-    return SwitchButtonStyle(
+    switchState = SwitchState(isOn: isOn)
+
+    // Create SwiftUI view
+    let swiftUIView = FCSwitchSwiftUIView(
       title: title,
-      isOn: isOn,
+      state: switchState,
       onColor: onColor,
       isEnabled: isEnabled
-    )
-  }
-
-  // MARK: - Switch Configuration
-
-  private func configureSwitch(with style: SwitchButtonStyle) {
-    // Configure the switch
-    switchControl.state = style.isOn ? .on : .off
-    switchControl.isEnabled = style.isEnabled
-    switchControl.target = self
-    switchControl.action = #selector(switchValueChanged)
-
-    // Set accessibility
-    if #available(macOS 10.14, *) {
-      switchControl.setAccessibilityRole(.button)
-    } else {
-      switchControl.setAccessibilityRole(.button)
-    }
-    switchControl.setAccessibilityValue(style.isOn ? "On" : "Off")
-
-    // Configure title label if title is provided
-    if let titleText = style.title, !titleText.isEmpty {
-      let label = NSTextField(labelWithString: titleText)
-      label.font = NSFont.systemFont(ofSize: 13)
-      label.textColor = .labelColor
-      titleLabel = label
-    }
-  }
-
-  // MARK: - Layout
-
-  private func setupLayout() {
-    // Configure stack view
-    stackView.orientation = .horizontal
-    stackView.alignment = .centerY
-    stackView.spacing = 8
-    stackView.translatesAutoresizingMaskIntoConstraints = false
-
-    // Add label if it exists
-    if let label = titleLabel {
-      stackView.addArrangedSubview(label)
+    ) { [weak channel] newValue in
+      channel?.invokeMethod("onToggle", arguments: newValue)
     }
 
-    // Add switch
-    stackView.addArrangedSubview(switchControl)
+    hostingView = NSHostingView(rootView: swiftUIView)
 
-    addSubview(stackView)
+    super.init(frame: frame)
+
+    // Add hosting view
+    hostingView.translatesAutoresizingMaskIntoConstraints = false
+    addSubview(hostingView)
 
     NSLayoutConstraint.activate([
-      stackView.centerXAnchor.constraint(equalTo: centerXAnchor),
-      stackView.centerYAnchor.constraint(equalTo: centerYAnchor),
-      stackView.leadingAnchor.constraint(
-        greaterThanOrEqualTo: leadingAnchor,
-        constant: 16
-      ),
-      stackView.trailingAnchor.constraint(
-        lessThanOrEqualTo: trailingAnchor,
-        constant: -16
-      ),
+      hostingView.leadingAnchor.constraint(equalTo: leadingAnchor),
+      hostingView.trailingAnchor.constraint(equalTo: trailingAnchor),
+      hostingView.topAnchor.constraint(equalTo: topAnchor),
+      hostingView.bottomAnchor.constraint(equalTo: bottomAnchor),
     ])
   }
 
-  // MARK: - Actions
-
-  @objc private func switchValueChanged() {
-    let isOn = switchControl.state == .on
-
-    // Update accessibility
-    switchControl.setAccessibilityValue(isOn ? "On" : "Off")
-
-    // Notify Flutter
-    channel.invokeMethod("onToggle", arguments: isOn)
+  required init?(coder: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
   }
 }
