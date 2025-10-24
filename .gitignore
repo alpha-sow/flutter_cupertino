@@ -42,3 +42,11 @@ app.*.map.json
 
 # Test related
 coverage
+.releaserc.json
+CLAUDE.md
+Makefile
+example/.releaserc.json
+example/scripts
+example/Makefile
+example/package.json
+package.json
