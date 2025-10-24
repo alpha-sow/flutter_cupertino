@@ -4,7 +4,7 @@
 [![Powered by Mason](https://img.shields.io/endpoint?url=https%3A%2F%2Ftinyurl.com%2Fmason-badge)](https://github.com/felangel/mason)
 [![License: MIT][license_badge]][license_link]
 
-A Flutter package that provides native Cupertino components for iOS and macOS using platform views and platform channels.
+A Flutter package that provides native Cupertino components for iOS and macOS using platform views and platform channels. This package allows you to use authentic native UI controls in your Flutter applications, giving your app a truly native look and feel on Apple platforms.
 
 ## Installation 💻
 
@@ -20,17 +20,47 @@ dart pub add flutter_cupertino
 
 ## Features ✨
 
+This package provides the following native Cupertino components:
+
 ### FCButton
 
 A native button widget that renders platform-specific UI components:
-- **iOS**: Uses UIKit's `UIButton`
-- **macOS**: Uses AppKit's `NSButton`
+
+- **iOS**: Uses SwiftUI's native `Button` with 8 distinct button styles
+- **macOS**: Uses SwiftUI's native `Button` with matching visual styles
 
 The button automatically adapts to the platform's native look and feel while providing a consistent Flutter API.
 
+### FCSlider
+
+A native slider widget that provides continuous value selection:
+
+- **iOS**: Uses SwiftUI's native `Slider`
+- **macOS**: Uses SwiftUI's native `Slider`
+
+Supports customizable track colors, thumb tint, continuous/discrete updates, and min/max value ranges.
+
+### FCSwitchButton
+
+A native switch/toggle widget for binary state controls:
+
+- **iOS**: Uses SwiftUI's native `Toggle` with full accessibility support
+- **macOS**: Uses SwiftUI's native `Toggle`
+
+Features customizable on-color, optional label text, and full accessibility support.
+
+### FCTabBar
+
+A native tab bar widget for bottom navigation:
+
+- **iOS**: Uses SwiftUI's native `TabView` with support for iOS 18+ features
+- **macOS**: Uses SwiftUI's native tab presentation
+
+Supports multiple tab bar styles, custom colors, badges, SF Symbols icons, and special roles (like search tabs on iOS 18+).
+
 ## Usage 🚀
 
-### Basic FCButton
+### Using FCButton
 
 Import the package and use the `FCButton` widget:
 
@@ -45,7 +75,7 @@ FCButton(
 )
 ```
 
-### Button Styles
+#### Button Styles
 
 The `FCButton` widget supports multiple native button styles through the `CNButtonStyle` enum:
 
@@ -107,7 +137,7 @@ FCButton(
 )
 ```
 
-### Customization
+#### Button Customization
 
 The `FCButton` widget supports extensive customization:
 
@@ -127,7 +157,7 @@ FCButton(
 )
 ```
 
-### Disabled Button
+#### Disabled Button
 
 Buttons can be disabled in two ways:
 
@@ -146,73 +176,126 @@ FCButton(
 )
 ```
 
-### Examples
+### Using FCSlider
 
-Check out the [example](example) directory for a complete demo app showing various button configurations:
-- All 8 button styles (plain, gray, tinted, bordered, borderedProminent, filled, glass, prominentGlass)
-- Custom colors with different styles
-- Disabled states
-- Press event handling
+A native slider for selecting values from a continuous range:
 
-### Architecture
+```dart
+import 'package:flutter_cupertino/flutter_cupertino.dart';
 
-The FCButton widget uses Flutter's platform view mechanism to embed native UI components:
-
-1. **Platform View**: Embeds native UIButton (iOS) or NSButton (macOS) into the Flutter widget tree
-2. **Method Channel**: Communicates button events from native code back to Flutter
-3. **Creation Parameters**: Passes styling and configuration from Flutter to native code
-
-The implementation consists of:
-- **Dart**: `FCButton` widget that wraps the platform view
-- **Swift (iOS)**: `FCButtonView` and `FCButtonFactory` for UIKit integration
-- **Swift (macOS)**: `FCButtonView` and `FCButtonFactory` for AppKit integration
-
----
-
-## Continuous Integration 🤖
-
-Flutter Cupertino comes with a built-in [GitHub Actions workflow][github_actions_link] powered by [Very Good Workflows][very_good_workflows_link] but you can also add your preferred CI/CD solution.
-
-Out of the box, on each pull request and push, the CI `formats`, `lints`, and `tests` the code. This ensures the code remains consistent and behaves correctly as you add functionality or make changes. The project uses [Very Good Analysis][very_good_analysis_link] for a strict set of analysis options used by our team. Code coverage is enforced using the [Very Good Workflows][very_good_coverage_link].
-
----
-
-## Running Tests 🧪
-
-For first time users, install the [very_good_cli][very_good_cli_link]:
-
-```sh
-dart pub global activate very_good_cli
+FCSlider(
+  value: 0.5,
+  minimumValue: 0.0,
+  maximumValue: 1.0,
+  onChanged: (double value) {
+    print('Slider value: $value');
+  },
+)
 ```
 
-To run all unit tests:
+#### Slider Customization
 
-```sh
-very_good test --coverage
+```dart
+FCSlider(
+  value: currentValue,
+  minimumValue: 0.0,
+  maximumValue: 100.0,
+  minimumTrackTintColor: Colors.blue,
+  maximumTrackTintColor: Colors.grey,
+  thumbTintColor: Colors.white,
+  isContinuous: true, // Send updates while dragging
+  width: 300,
+  height: 44,
+  onChanged: (value) {
+    setState(() => currentValue = value);
+  },
+)
 ```
 
-To view the generated coverage report you can use [lcov](https://github.com/linux-test-project/lcov).
+### Using FCSwitchButton
 
-```sh
-# Generate Coverage Report
-genhtml coverage/lcov.info -o coverage/
+A native switch for binary on/off states:
 
-# Open Coverage Report
-open coverage/index.html
+```dart
+import 'package:flutter_cupertino/flutter_cupertino.dart';
+
+FCSwitchButton(
+  isOn: isEnabled,
+  onToggle: (bool value) {
+    setState(() => isEnabled = value);
+  },
+)
+```
+
+#### Switch Customization
+
+```dart
+FCSwitchButton(
+  label: 'Enable Notifications',
+  isOn: notificationsEnabled,
+  onColor: Colors.green,
+  isEnabled: true,
+  width: 200,
+  height: 44,
+  onToggle: (value) {
+    setState(() => notificationsEnabled = value);
+  },
+)
+```
+
+### Using FCTabBar
+
+A native tab bar for bottom navigation:
+
+```dart
+import 'package:flutter_cupertino/flutter_cupertino.dart';
+
+FCTabBar(
+  items: const [
+    FCTabItem(label: 'Home', icon: 'house.fill'),
+    FCTabItem(label: 'Search', role: FCTabItemRole.search),
+    FCTabItem(label: 'Profile', icon: 'person.fill'),
+  ],
+  selectedIndex: currentIndex,
+  onTabSelected: (int index) {
+    setState(() => currentIndex = index);
+  },
+)
+```
+
+#### Tab Bar Customization
+
+```dart
+FCTabBar(
+  items: const [
+    FCTabItem(
+      label: 'Home',
+      icon: 'house.fill',
+      badge: '3',
+    ),
+    FCTabItem(
+      label: 'Search',
+      role: FCTabItemRole.search,
+    ),
+    FCTabItem(
+      label: 'Settings',
+      icon: 'gear',
+    ),
+  ],
+  selectedIndex: selectedTab,
+  style: FCTabBarStyle.standard,
+  backgroundColor: Colors.white,
+  selectedTintColor: Colors.blue,
+  unselectedTintColor: Colors.grey,
+  isTranslucent: true,
+  onTabSelected: (index) {
+    setState(() => selectedTab = index);
+  },
+)
 ```
 
 [flutter_install_link]: https://docs.flutter.dev/get-started/install
-[github_actions_link]: https://docs.github.com/en/actions/learn-github-actions
 [license_badge]: https://img.shields.io/badge/license-MIT-blue.svg
 [license_link]: https://opensource.org/licenses/MIT
-[logo_black]: https://raw.githubusercontent.com/VGVentures/very_good_brand/main/styles/README/vgv_logo_black.png#gh-light-mode-only
-[logo_white]: https://raw.githubusercontent.com/VGVentures/very_good_brand/main/styles/README/vgv_logo_white.png#gh-dark-mode-only
-[mason_link]: https://github.com/felangel/mason
 [very_good_analysis_badge]: https://img.shields.io/badge/style-very_good_analysis-B22C89.svg
 [very_good_analysis_link]: https://pub.dev/packages/very_good_analysis
-[very_good_cli_link]: https://pub.dev/packages/very_good_cli
-[very_good_coverage_link]: https://github.com/marketplace/actions/very-good-coverage
-[very_good_ventures_link]: https://verygood.ventures
-[very_good_ventures_link_light]: https://verygood.ventures#gh-light-mode-only
-[very_good_ventures_link_dark]: https://verygood.ventures#gh-dark-mode-only
-[very_good_workflows_link]: https://github.com/VeryGoodOpenSource/very_good_workflows

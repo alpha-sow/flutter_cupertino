@@ -12,7 +12,7 @@ class TabBarPage extends StatefulWidget {
 
 class _TabBarPageState extends State<TabBarPage> {
   int _selectedTab = 0;
-  final CNTabBarStyle _selectedStyle = CNTabBarStyle.standard;
+  final FCTabBarStyle _selectedStyle = FCTabBarStyle.standard;
 
   // Tab items for the tab bar
   final List<FCTabItem> _tabItems = const [

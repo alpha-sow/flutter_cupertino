@@ -58,7 +58,7 @@ class FCTabItem {
 }
 
 /// Tab bar style options for native Cupertino tab bars.
-enum CNTabBarStyle {
+enum FCTabBarStyle {
   /// Standard tab bar style.
   standard,
 
@@ -98,7 +98,7 @@ class FCTabBar extends StatefulWidget {
     required this.items,
     required this.onTabSelected,
     this.selectedIndex = 0,
-    this.style = CNTabBarStyle.standard,
+    this.style = FCTabBarStyle.standard,
     this.backgroundColor,
     this.selectedTintColor,
     this.unselectedTintColor,
@@ -126,8 +126,8 @@ class FCTabBar extends StatefulWidget {
   final int selectedIndex;
 
   /// The style of the tab bar.
-  /// Defaults to [CNTabBarStyle.standard].
-  final CNTabBarStyle style;
+  /// Defaults to [FCTabBarStyle.standard].
+  final FCTabBarStyle style;
 
   /// The background color of the tab bar.
   /// If null, uses the system default.
