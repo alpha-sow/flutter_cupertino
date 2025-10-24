@@ -274,7 +274,7 @@ class FCButtonView: NSView {
     foregroundColor: NSColor?
   ) {
     // Store the button's existing constraints before removing
-    let existingConstraints = button.constraints
+    let _ = button.constraints
 
     // Remove the button from superview temporarily to reorder views
     button.removeFromSuperview()
