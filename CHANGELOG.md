@@ -1,5 +1,11 @@
-# 1.0.0 (2025-10-24)
+## 1.0.0+2 (2025-10-24)
 
+### Fix
+
+* Remove Flutter version upper bound constraint
+* Clean up cached files from git tracking
+
+## 1.0.0 (2025-10-24)
 
 ### Features
 
