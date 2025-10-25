@@ -38,28 +38,27 @@ class SwitchState: ObservableObject {
 
 // SwiftUI Switch View
 struct FCSwitchSwiftUIView: View {
-  let title: String?
+  let label: String?
   @ObservedObject var state: SwitchState
   let onColor: Color?
   let isEnabled: Bool
   let onToggle: (Bool) -> Void
 
   var body: some View {
-    HStack(spacing: 8) {
-      if let title = title, !title.isEmpty {
-        Text(title)
-          .font(.system(size: 13))
+    let toggle = Toggle(label ?? "", isOn: $state.isOn)
+      .tint(onColor ?? .blue)
+      .disabled(!isEnabled)
+      .toggleStyle(.switch)
+      .onChange(of: state.isOn) { newValue in
+        onToggle(newValue)
       }
 
-      Toggle("", isOn: $state.isOn)
+    if label == nil || label?.isEmpty == true {
+      toggle
         .labelsHidden()
-        .toggleStyle(SwitchToggleStyle(tint: onColor ?? .accentColor))
-        .disabled(!isEnabled)
-        .onChange(of: state.isOn) { newValue in
-          onToggle(newValue)
-        }
+    } else {
+      toggle
     }
-    .padding(.horizontal, 16)
   }
 }
 
@@ -80,13 +79,13 @@ class FCSwitchButtonView: NSView {
     )
 
     // Parse arguments
-    var title: String?
+    var label: String?
     var isOn = false
     var onColor: Color?
     var isEnabled = true
 
     if let args = args as? [String: Any] {
-      title = args["title"] as? String
+      label = args["label"] as? String
       isOn = args["isOn"] as? Bool ?? isOn
 
       if let onColorValue = args["onColor"] as? Int {
@@ -100,7 +99,7 @@ class FCSwitchButtonView: NSView {
 
     // Create SwiftUI view
     let swiftUIView = FCSwitchSwiftUIView(
-      title: title,
+      label: label,
       state: switchState,
       onColor: onColor,
       isEnabled: isEnabled
