@@ -58,6 +58,15 @@ A native tab bar widget for bottom navigation:
 
 Supports multiple tab bar styles, custom colors, badges, SF Symbols icons, and special roles (like search tabs on iOS 18+).
 
+### FCNavigationBar
+
+A native navigation bar widget for top navigation:
+
+- **iOS**: Provides a native-styled navigation bar with title and action buttons
+- **macOS**: Provides a native-styled navigation bar with title and action buttons
+
+Features customizable background color, large title display modes, native bar button items, and flexible height options.
+
 ## Usage 🚀
 
 ### Using FCButton
@@ -291,6 +300,87 @@ FCTabBar(
   onTabSelected: (index) {
     setState(() => selectedTab = index);
   },
+)
+```
+
+### Using FCNavigationBar
+
+A native navigation bar for top navigation with title and action buttons:
+
+```dart
+import 'package:flutter_cupertino/flutter_cupertino.dart';
+
+FCNavigationBar(
+  title: const Text('My App'),
+  leading: CupertinoButton(
+    padding: EdgeInsets.zero,
+    child: const Icon(CupertinoIcons.back),
+    onPressed: () => Navigator.pop(context),
+  ),
+  trailing: CupertinoButton(
+    padding: EdgeInsets.zero,
+    child: const Icon(CupertinoIcons.settings),
+    onPressed: () {
+      // Handle settings
+    },
+  ),
+)
+```
+
+#### Navigation Bar with Native Bar Buttons
+
+Use `FCBarButtonItem` for native UIBarButtonItem-style buttons:
+
+```dart
+FCNavigationBar(
+  title: const Text('Settings'),
+  leadingItems: [
+    FCBarButtonItem.system(
+      systemItem: FCBarButtonSystemItem.cancel,
+      onTap: () => Navigator.pop(context),
+    ),
+  ],
+  trailingItems: [
+    FCBarButtonItem.system(
+      systemItem: FCBarButtonSystemItem.done,
+      onTap: () {
+        // Save changes
+      },
+    ),
+  ],
+)
+```
+
+#### Navigation Bar Customization
+
+```dart
+FCNavigationBar(
+  title: const Text('Profile'),
+  backgroundColor: CupertinoColors.systemBackground,
+  largeTitleDisplayMode: FCLargeTitleDisplayMode.always,
+  preferredHeight: 52,
+  leadingItems: [
+    FCBarButtonItem.icon(
+      systemIconName: 'arrow.left',
+      tintColor: CupertinoColors.activeBlue,
+      onTap: () => Navigator.pop(context),
+    ),
+  ],
+  trailingItems: [
+    FCBarButtonItem.text(
+      title: 'Edit',
+      style: FCBarButtonStyle.done,
+      onTap: () {
+        // Edit profile
+      },
+    ),
+    FCBarButtonItem.icon(
+      systemIconName: 'gear',
+      onTap: () {
+        // Open settings
+      },
+    ),
+  ],
 )
 ```
 
