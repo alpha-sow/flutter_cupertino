@@ -1,6 +1,6 @@
 name: flutter_cupertino
 description: Native Cupertino components for iOS and macOS built with SwiftUI. Provides authentic platform views including buttons, sliders, switches, and tab bars with full customization support.
-version: 1.0.2
+version: 1.0.3
 repository: https://github.com/alpha-sow/flutter_cupertino
 homepage: https://github.com/alpha-sow/flutter_cupertino
 

@@ -1,3 +1,12 @@
+## [1.0.3](https://github.com/alpha-sow/flutter_cupertino/compare/v1.0.2...v1.0.3) (2025-11-03)
+
+
+### Bug Fixes
+
+* optimize constraint handling in FCButtonView ([6672d52](https://github.com/alpha-sow/flutter_cupertino/commit/6672d52508d4c4c4f9744b93b6793cbc87177cad))
+* update FCSwitchSwiftUIView to use 'label' instead of 'title' for better clarity ([faeb233](https://github.com/alpha-sow/flutter_cupertino/commit/faeb233ba80611264cd1cf24f29d374615e71d6e))
+* use swift ui on mac os ([28d3525](https://github.com/alpha-sow/flutter_cupertino/commit/28d35251acbc57147f90c5a80c803631c5335ee4))
+
 ## [1.0.2](https://github.com/alpha-sow/flutter_cupertino/compare/v1.0.1...v1.0.2) (2025-10-24)
 
 
