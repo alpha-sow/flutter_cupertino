@@ -1,3 +1,15 @@
+# [1.1.0](https://github.com/alpha-sow/flutter_cupertino/compare/v1.0.3...v1.1.0) (2025-12-05)
+
+
+### Bug Fixes
+
+* update app name to 'Flutter Cupertino' in Info.plist and AppInfo.xcconfig ([dff8e52](https://github.com/alpha-sow/flutter_cupertino/commit/dff8e528a5ee8ee37857570c325ea5b0ec5cbdc2))
+
+
+### Features
+
+* add Flutter app theme support to all native components ([5703911](https://github.com/alpha-sow/flutter_cupertino/commit/5703911a0af024014aeaae778ddcd76896972dad))
+
 ## [1.0.3](https://github.com/alpha-sow/flutter_cupertino/compare/v1.0.2...v1.0.3) (2025-11-03)
 
 
