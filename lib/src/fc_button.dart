@@ -1,8 +1,9 @@
+import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 // ignore: unused_import, provides Color.toARGB32() extension
 import 'package:flutter_cupertino/src/utilities.dart';
@@ -117,6 +118,7 @@ class FCButton extends StatefulWidget {
 
 class _FCButtonState extends State<FCButton> {
   MethodChannel? _channel;
+  Brightness? _lastBrightness;
 
   @override
   void dispose() {
@@ -127,6 +129,7 @@ class _FCButtonState extends State<FCButton> {
   void _onPlatformViewCreated(int id) {
     _channel = MethodChannel('flutter_cupertino/fc_button_$id');
     _channel!.setMethodCallHandler(_handleMethodCall);
+    _lastBrightness = CupertinoTheme.brightnessOf(context);
   }
 
   Future<dynamic> _handleMethodCall(MethodCall call) async {
@@ -135,7 +138,32 @@ class _FCButtonState extends State<FCButton> {
     }
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    unawaited(_syncBrightnessIfNeeded());
+  }
+
+  Future<void> _syncBrightnessIfNeeded() async {
+    final ch = _channel;
+    if (ch == null) return;
+    final brightness = CupertinoTheme.brightnessOf(context);
+    if (_lastBrightness != brightness) {
+      _lastBrightness = brightness;
+      try {
+        await ch.invokeMethod('updateBrightness', {
+          'brightness': brightness == Brightness.dark ? 'dark' : 'light',
+        });
+      } on Exception catch (e) {
+        if (kDebugMode) {
+          print('FCButton: Failed to update brightness: $e');
+        }
+      }
+    }
+  }
+
   Map<String, dynamic> _getCreationParams() {
+    final brightness = CupertinoTheme.brightnessOf(context);
     return {
       'title': widget.title,
       'style': widget.style.name,
@@ -144,6 +172,7 @@ class _FCButtonState extends State<FCButton> {
       'fontSize': widget.fontSize,
       'isEnabled': widget.isEnabled && widget.onPressed != null,
       'controlSize': widget.controlSize.name,
+      'brightness': brightness == Brightness.dark ? 'dark' : 'light',
     };
   }
 

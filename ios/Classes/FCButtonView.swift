@@ -30,6 +30,7 @@ class FCButtonFactory: NSObject, FlutterPlatformViewFactory {
 class FCButtonView: NSObject, FlutterPlatformView {
   private var hostingController: UIHostingController<AnyView>
   private var channel: FlutterMethodChannel
+  private var viewModel: Any?
 
   init(
     frame: CGRect,
@@ -43,21 +44,51 @@ class FCButtonView: NSObject, FlutterPlatformView {
     )
 
     let buttonConfig = Self.parseArguments(args)
-    let buttonView = FCButtonSwiftUIView(
-      config: buttonConfig,
-      onPressed: { [weak channel] in
-        channel?.invokeMethod("onPressed", arguments: nil)
-      }
-    )
-
-    hostingController = UIHostingController(rootView: AnyView(buttonView.makeButton()))
+    if #available(iOS 15.0, *) {
+      let vm = FCButtonViewModel(config: buttonConfig)
+      viewModel = vm
+      let buttonView = FCButtonSwiftUIView(
+        viewModel: vm,
+        onPressed: { [weak channel] in
+          channel?.invokeMethod("onPressed", arguments: nil)
+        }
+      )
+      hostingController = UIHostingController(rootView: AnyView(buttonView.makeButton()))
+    } else {
+      hostingController = UIHostingController(rootView: AnyView(Text("iOS 15.0+ required")))
+    }
     hostingController.view.backgroundColor = .clear
 
     super.init()
+
+    channel.setMethodCallHandler { [weak self] (call, result) in
+      self?.handleMethodCall(call, result: result)
+    }
   }
 
   func view() -> UIView {
     return hostingController.view
+  }
+
+  private func handleMethodCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    switch call.method {
+    case "updateBrightness":
+      if #available(iOS 15.0, *) {
+        if let args = call.arguments as? [String: Any],
+          let brightness = args["brightness"] as? String,
+          let vm = viewModel as? FCButtonViewModel
+        {
+          vm.updateBrightness(brightness)
+          result(nil)
+        } else {
+          result(FlutterError(code: "INVALID_ARGS", message: "Invalid arguments", details: nil))
+        }
+      } else {
+        result(FlutterMethodNotImplemented)
+      }
+    default:
+      result(FlutterMethodNotImplemented)
+    }
   }
 
   // MARK: - Argument Parsing
@@ -81,6 +112,7 @@ class FCButtonView: NSObject, FlutterPlatformView {
 
       config.isEnabled = args["isEnabled"] as? Bool ?? config.isEnabled
       config.controlSize = args["controlSize"] as? String ?? config.controlSize
+      config.brightness = args["brightness"] as? String ?? config.brightness
     }
 
     return config
@@ -97,18 +129,38 @@ struct FCButtonConfiguration {
   var fontSize: CGFloat = 17.0
   var isEnabled: Bool = true
   var controlSize: String = "regular"
+  var brightness: String = "light"
+}
+
+// MARK: - ViewModel
+
+@available(iOS 15.0, *)
+class FCButtonViewModel: ObservableObject {
+  @Published var brightness: String
+  let config: FCButtonConfiguration
+
+  init(config: FCButtonConfiguration) {
+    self.config = config
+    self.brightness = config.brightness
+  }
+
+  func updateBrightness(_ brightness: String) {
+    DispatchQueue.main.async {
+      self.brightness = brightness
+    }
+  }
 }
 
 // MARK: - SwiftUI View
 
 @available(iOS 15.0, *)
 struct FCButtonSwiftUIView {
-  let config: FCButtonConfiguration
+  @ObservedObject var viewModel: FCButtonViewModel
   let onPressed: () -> Void
 
   @ViewBuilder
   func makeButton() -> some View {
-    switch config.style {
+    switch viewModel.config.style {
     case "bordered":
       baseButton.buttonStyle(.bordered)
     case "borderedProminent":
@@ -136,19 +188,20 @@ struct FCButtonSwiftUIView {
 
   private var baseButton: some View {
     Button(action: onPressed) {
-      Text(config.title)
+      Text(viewModel.config.title)
     }
     .controlSize(controlSizeFromConfig)
     .tint(tintColor)
     .foregroundColor(foregroundColor)
-    .font(.system(size: config.fontSize, weight: .medium))
-    .disabled(!config.isEnabled)
+    .font(.system(size: viewModel.config.fontSize, weight: .medium))
+    .disabled(!viewModel.config.isEnabled)
+    .environment(\.colorScheme, viewModel.brightness == "dark" ? .dark : .light)
   }
 
   // MARK: - Style Helpers
 
   private var controlSizeFromConfig: ControlSize {
-    switch config.controlSize {
+    switch viewModel.config.controlSize {
     case "mini":
       return .mini
     case "small":
@@ -161,14 +214,14 @@ struct FCButtonSwiftUIView {
   }
 
   private var tintColor: Color? {
-    if let bgColor = config.backgroundColor {
+    if let bgColor = viewModel.config.backgroundColor {
       return Color(bgColor)
     }
     return nil
   }
 
   private var foregroundColor: Color? {
-    if let fgColor = config.foregroundColor {
+    if let fgColor = viewModel.config.foregroundColor {
       return Color(fgColor)
     }
     return nil

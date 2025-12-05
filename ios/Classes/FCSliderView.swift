@@ -30,6 +30,7 @@ class FCSliderFactory: NSObject, FlutterPlatformViewFactory {
 class FCSliderView: NSObject, FlutterPlatformView {
   private var hostingController: UIHostingController<AnyView>
   private var channel: FlutterMethodChannel
+  private var viewModel: Any?
 
   init(
     frame: CGRect,
@@ -43,14 +44,19 @@ class FCSliderView: NSObject, FlutterPlatformView {
     )
 
     let config = Self.parseArguments(args)
-    let sliderView = FCSliderSwiftUIView(
-      config: config,
-      onValueChanged: { [weak channel] value in
-        channel?.invokeMethod("valueChanged", arguments: ["value": value])
-      }
-    )
-
-    hostingController = UIHostingController(rootView: AnyView(sliderView))
+    if #available(iOS 15.0, *) {
+      let vm = FCSliderViewModel(config: config)
+      viewModel = vm
+      let sliderView = FCSliderSwiftUIView(
+        viewModel: vm,
+        onValueChanged: { [weak channel] value in
+          channel?.invokeMethod("valueChanged", arguments: ["value": value])
+        }
+      )
+      hostingController = UIHostingController(rootView: AnyView(sliderView))
+    } else {
+      hostingController = UIHostingController(rootView: AnyView(Text("iOS 15.0+ required")))
+    }
     hostingController.view.backgroundColor = .clear
 
     super.init()
@@ -81,6 +87,20 @@ class FCSliderView: NSObject, FlutterPlatformView {
         } else {
           result(
             FlutterError(code: "INVALID_ARGUMENT", message: "Value must be a double", details: nil))
+        }
+      case "updateBrightness":
+        if #available(iOS 15.0, *) {
+          if let args = call.arguments as? [String: Any],
+            let brightness = args["brightness"] as? String,
+            let vm = viewModel as? FCSliderViewModel
+          {
+            vm.updateBrightness(brightness)
+            result(nil)
+          } else {
+            result(FlutterError(code: "INVALID_ARGS", message: "Invalid arguments", details: nil))
+          }
+        } else {
+          result(FlutterMethodNotImplemented)
         }
       default:
         result(FlutterMethodNotImplemented)
@@ -115,6 +135,7 @@ class FCSliderView: NSObject, FlutterPlatformView {
       if let continuous = args["isContinuous"] as? Bool {
         config.isContinuous = continuous
       }
+      config.brightness = args["brightness"] as? String ?? config.brightness
     }
 
     return config
@@ -123,7 +144,7 @@ class FCSliderView: NSObject, FlutterPlatformView {
 
 // MARK: - Configuration
 
-private struct FCSliderConfiguration {
+fileprivate struct FCSliderConfiguration {
   var value: Double = 0.5
   var minimumValue: Double = 0.0
   var maximumValue: Double = 1.0
@@ -131,6 +152,26 @@ private struct FCSliderConfiguration {
   var maximumTrackTintColor: UIColor?
   var thumbTintColor: UIColor?
   var isContinuous: Bool = true
+  var brightness: String = "light"
+}
+
+// MARK: - ViewModel
+
+@available(iOS 15.0, *)
+fileprivate class FCSliderViewModel: ObservableObject {
+  @Published var brightness: String
+  let config: FCSliderConfiguration
+
+  init(config: FCSliderConfiguration) {
+    self.config = config
+    self.brightness = config.brightness
+  }
+
+  func updateBrightness(_ brightness: String) {
+    DispatchQueue.main.async {
+      self.brightness = brightness
+    }
+  }
 }
 
 // MARK: - SwiftUI View
@@ -138,13 +179,13 @@ private struct FCSliderConfiguration {
 @available(iOS 15.0, *)
 private struct FCSliderSwiftUIView: View {
   @State private var value: Double
-  let config: FCSliderConfiguration
+  @ObservedObject var viewModel: FCSliderViewModel
   let onValueChanged: (Double) -> Void
 
-  init(config: FCSliderConfiguration, onValueChanged: @escaping (Double) -> Void) {
-    self.config = config
+  init(viewModel: FCSliderViewModel, onValueChanged: @escaping (Double) -> Void) {
+    self.viewModel = viewModel
     self.onValueChanged = onValueChanged
-    self._value = State(initialValue: config.value)
+    self._value = State(initialValue: viewModel.config.value)
   }
 
   var body: some View {
@@ -153,20 +194,21 @@ private struct FCSliderSwiftUIView: View {
         get: { value },
         set: { newValue in
           value = newValue
-          if config.isContinuous {
+          if viewModel.config.isContinuous {
             onValueChanged(newValue)
           }
         }
       ),
-      in: config.minimumValue...config.maximumValue,
+      in: viewModel.config.minimumValue...viewModel.config.maximumValue,
       onEditingChanged: { editing in
-        if !editing && !config.isContinuous {
+        if !editing && !viewModel.config.isContinuous {
           onValueChanged(value)
         }
       }
     )
-    .tint(Color(config.minimumTrackTintColor))
+    .tint(Color(viewModel.config.minimumTrackTintColor))
     .padding(.horizontal, 16)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .environment(\.colorScheme, viewModel.brightness == "dark" ? .dark : .light)
   }
 }

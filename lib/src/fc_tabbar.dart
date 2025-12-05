@@ -1,8 +1,9 @@
+import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 // ignore: unused_import, provides Color.toARGB32() extension
 import 'package:flutter_cupertino/src/utilities.dart';
@@ -152,10 +153,24 @@ class FCTabBar extends StatefulWidget {
 
   @override
   State<FCTabBar> createState() => _FCTabBarState();
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties
+      ..add(IntProperty('selectedIndex', selectedIndex))
+      ..add(EnumProperty<FCTabBarStyle>('style', style))
+      ..add(ColorProperty('backgroundColor', backgroundColor))
+      ..add(ColorProperty('selectedTintColor', selectedTintColor))
+      ..add(ColorProperty('unselectedTintColor', unselectedTintColor))
+      ..add(DoubleProperty('height', height))
+      ..add(DiagnosticsProperty<bool>('isTranslucent', isTranslucent));
+  }
 }
 
 class _FCTabBarState extends State<FCTabBar> {
   MethodChannel? _channel;
+  Brightness? _lastBrightness;
 
   @override
   void dispose() {
@@ -166,6 +181,7 @@ class _FCTabBarState extends State<FCTabBar> {
   void _onPlatformViewCreated(int id) {
     _channel = MethodChannel('flutter_cupertino/fc_tabbar_$id');
     _channel!.setMethodCallHandler(_handleMethodCall);
+    _lastBrightness = CupertinoTheme.brightnessOf(context);
   }
 
   Future<dynamic> _handleMethodCall(MethodCall call) async {
@@ -175,7 +191,33 @@ class _FCTabBarState extends State<FCTabBar> {
     }
   }
 
-  Map<String, dynamic> _getCreationParams() {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    unawaited(_syncBrightnessIfNeeded());
+  }
+
+  Future<void> _syncBrightnessIfNeeded() async {
+    final ch = _channel;
+    if (ch == null) return;
+    final brightness = CupertinoTheme.brightnessOf(context);
+    if (_lastBrightness != brightness) {
+      _lastBrightness = brightness;
+      try {
+        await ch.invokeMethod('updateBrightness', {
+          'brightness': brightness == Brightness.dark ? 'dark' : 'light',
+        });
+      } on Exception catch (e) {
+        // Ignore errors from method channel
+        if (kDebugMode) {
+          print('FCTabBar: Failed to update brightness: $e');
+        }
+      }
+    }
+  }
+
+  Map<String, dynamic> _getCreationParams(BuildContext context) {
+    final brightness = CupertinoTheme.brightnessOf(context);
     return {
       'items': widget.items.map((item) => item.toMap()).toList(),
       'selectedIndex': widget.selectedIndex,
@@ -184,6 +226,7 @@ class _FCTabBarState extends State<FCTabBar> {
       'selectedTintColor': widget.selectedTintColor?.toARGB32(),
       'unselectedTintColor': widget.unselectedTintColor?.toARGB32(),
       'isTranslucent': widget.isTranslucent,
+      'brightness': brightness == Brightness.dark ? 'dark' : 'light',
     };
   }
 
@@ -197,13 +240,13 @@ class _FCTabBarState extends State<FCTabBar> {
 
     return SizedBox(
       height: widget.height,
-      child: _buildPlatformView(),
+      child: _buildPlatformView(context),
     );
   }
 
-  Widget _buildPlatformView() {
+  Widget _buildPlatformView(BuildContext context) {
     const viewType = 'flutter_cupertino/fc_tabbar';
-    final creationParams = _getCreationParams();
+    final creationParams = _getCreationParams(context);
 
     if (Platform.isIOS) {
       return UiKitView(

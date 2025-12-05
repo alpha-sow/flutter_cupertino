@@ -8,18 +8,39 @@ void main() {
 }
 
 /// The main application widget.
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   /// Creates a [MyApp].
   const MyApp({super.key});
 
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  Brightness _themeMode = Brightness.light;
+
+  void _cycleTheme() {
+    setState(() {
+      if (_themeMode == Brightness.light) {
+        _themeMode = Brightness.dark;
+      } else {
+        _themeMode = Brightness.light;
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return const CupertinoApp(
+    return CupertinoApp(
       title: 'Flutter Cupertino Example',
       theme: CupertinoThemeData(
         primaryColor: CupertinoColors.systemBlue,
+        brightness: _themeMode,
       ),
-      home: HomePage(),
+      home: HomePage(
+        onThemeToggle: _cycleTheme,
+        currentBrightness: _themeMode,
+      ),
     );
   }
 }
@@ -27,13 +48,32 @@ class MyApp extends StatelessWidget {
 /// Home page with navigation to component examples.
 class HomePage extends StatelessWidget {
   /// Creates a [HomePage].
-  const HomePage({super.key});
+  const HomePage({
+    required this.onThemeToggle,
+    required this.currentBrightness,
+    super.key,
+  });
+
+  /// Callback to toggle the theme.
+  final VoidCallback onThemeToggle;
+
+  /// Current brightness mode.
+  final Brightness currentBrightness;
 
   @override
   Widget build(BuildContext context) {
+    final icon = currentBrightness == Brightness.light
+        ? CupertinoIcons.moon_fill
+        : CupertinoIcons.sun_max_fill;
+
     return CupertinoPageScaffold(
-      navigationBar: const CupertinoNavigationBar(
-        middle: Text('Flutter Cupertino Examples'),
+      navigationBar: CupertinoNavigationBar(
+        middle: const Text('Flutter Cupertino Examples'),
+        trailing: CupertinoButton(
+          padding: EdgeInsets.zero,
+          onPressed: onThemeToggle,
+          child: Icon(icon),
+        ),
       ),
       child: SafeArea(
         child: ListView(

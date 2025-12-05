@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
+// ignore: unused_import, provides Color.toARGB32() extension
+import 'package:flutter_cupertino/src/utilities.dart';
 
 /// {@template fc_switch_button}
 /// A native Cupertino switch button widget that uses platform-specific
@@ -65,6 +68,7 @@ class FCSwitchButton extends StatefulWidget {
 
 class _FCSwitchButtonState extends State<FCSwitchButton> {
   MethodChannel? _channel;
+  Brightness? _lastBrightness;
 
   @override
   void dispose() {
@@ -72,9 +76,16 @@ class _FCSwitchButtonState extends State<FCSwitchButton> {
     super.dispose();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    unawaited(_syncBrightnessIfNeeded());
+  }
+
   void _onPlatformViewCreated(int id) {
     _channel = MethodChannel('flutter_cupertino/fc_switch_button_$id');
     _channel!.setMethodCallHandler(_handleMethodCall);
+    _lastBrightness = CupertinoTheme.brightnessOf(context);
   }
 
   Future<dynamic> _handleMethodCall(MethodCall call) async {
@@ -84,13 +95,33 @@ class _FCSwitchButtonState extends State<FCSwitchButton> {
     }
   }
 
+  Future<void> _syncBrightnessIfNeeded() async {
+    final ch = _channel;
+    if (ch == null) return;
+    final brightness = CupertinoTheme.brightnessOf(context);
+    if (_lastBrightness != brightness) {
+      _lastBrightness = brightness;
+      try {
+        await ch.invokeMethod('updateBrightness', {
+          'brightness': brightness == Brightness.dark ? 'dark' : 'light',
+        });
+      } on Exception catch (e) {
+        if (kDebugMode) {
+          print('FCSwitchButton: Failed to update brightness: $e');
+        }
+      }
+    }
+  }
+
   Map<String, dynamic> _getCreationParams() {
+    final brightness = CupertinoTheme.brightnessOf(context);
     return {
       'label': widget.label ?? '',
       'isOn': widget.isOn,
       'onColor':
           widget.onColor?.toARGB32() ?? CupertinoColors.systemBlue.toARGB32(),
       'isEnabled': widget.isEnabled,
+      'brightness': brightness == Brightness.dark ? 'dark' : 'light',
     };
   }
 

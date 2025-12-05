@@ -30,6 +30,7 @@ class FCSwitchButtonFactory: NSObject, FlutterPlatformViewFactory {
 class FCSwitchButtonView: NSObject, FlutterPlatformView {
   private var hostingController: UIHostingController<AnyView>
   private var channel: FlutterMethodChannel
+  private var viewModel: Any?
 
   init(
     frame: CGRect,
@@ -43,21 +44,51 @@ class FCSwitchButtonView: NSObject, FlutterPlatformView {
     )
 
     let config = Self.parseArguments(args)
-    let switchView = FCSwitchButtonSwiftUIView(
-      config: config,
-      onToggle: { [weak channel] isOn in
-        channel?.invokeMethod("onToggle", arguments: isOn)
-      }
-    )
-
-    hostingController = UIHostingController(rootView: AnyView(switchView))
+    if #available(iOS 15.0, *) {
+      let vm = FCSwitchButtonViewModel(config: config)
+      viewModel = vm
+      let switchView = FCSwitchButtonSwiftUIView(
+        viewModel: vm,
+        onToggle: { [weak channel] isOn in
+          channel?.invokeMethod("onToggle", arguments: isOn)
+        }
+      )
+      hostingController = UIHostingController(rootView: AnyView(switchView))
+    } else {
+      hostingController = UIHostingController(rootView: AnyView(Text("iOS 15.0+ required")))
+    }
     hostingController.view.backgroundColor = .clear
 
     super.init()
+
+    channel.setMethodCallHandler { [weak self] (call, result) in
+      self?.handleMethodCall(call, result: result)
+    }
   }
 
   func view() -> UIView {
     return hostingController.view
+  }
+
+  private func handleMethodCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    switch call.method {
+    case "updateBrightness":
+      if #available(iOS 15.0, *) {
+        if let args = call.arguments as? [String: Any],
+          let brightness = args["brightness"] as? String,
+          let vm = viewModel as? FCSwitchButtonViewModel
+        {
+          vm.updateBrightness(brightness)
+          result(nil)
+        } else {
+          result(FlutterError(code: "INVALID_ARGS", message: "Invalid arguments", details: nil))
+        }
+      } else {
+        result(FlutterMethodNotImplemented)
+      }
+    default:
+      result(FlutterMethodNotImplemented)
+    }
   }
 
   // MARK: - Argument Parsing
@@ -74,6 +105,7 @@ class FCSwitchButtonView: NSObject, FlutterPlatformView {
       }
 
       config.isEnabled = args["isEnabled"] as? Bool ?? config.isEnabled
+      config.brightness = args["brightness"] as? String ?? config.brightness
     }
 
     return config
@@ -82,11 +114,31 @@ class FCSwitchButtonView: NSObject, FlutterPlatformView {
 
 // MARK: - Configuration
 
-private struct FCSwitchButtonConfiguration {
+fileprivate struct FCSwitchButtonConfiguration {
   var label: String = ""
   var isOn: Bool = false
   var onColor: UIColor = .systemGreen
   var isEnabled: Bool = true
+  var brightness: String = "light"
+}
+
+// MARK: - ViewModel
+
+@available(iOS 15.0, *)
+fileprivate class FCSwitchButtonViewModel: ObservableObject {
+  @Published var brightness: String
+  let config: FCSwitchButtonConfiguration
+
+  init(config: FCSwitchButtonConfiguration) {
+    self.config = config
+    self.brightness = config.brightness
+  }
+
+  func updateBrightness(_ brightness: String) {
+    DispatchQueue.main.async {
+      self.brightness = brightness
+    }
+  }
 }
 
 // MARK: - SwiftUI View
@@ -94,18 +146,18 @@ private struct FCSwitchButtonConfiguration {
 @available(iOS 15.0, *)
 private struct FCSwitchButtonSwiftUIView: View {
   @State private var isOn: Bool
-  let config: FCSwitchButtonConfiguration
+  @ObservedObject var viewModel: FCSwitchButtonViewModel
   let onToggle: (Bool) -> Void
 
-  init(config: FCSwitchButtonConfiguration, onToggle: @escaping (Bool) -> Void) {
-    self.config = config
+  init(viewModel: FCSwitchButtonViewModel, onToggle: @escaping (Bool) -> Void) {
+    self.viewModel = viewModel
     self.onToggle = onToggle
-    self._isOn = State(initialValue: config.isOn)
+    self._isOn = State(initialValue: viewModel.config.isOn)
   }
 
   var body: some View {
     let toggle = Toggle(
-      config.label,
+      viewModel.config.label,
       isOn: Binding(
         get: { isOn },
         set: { newValue in
@@ -114,9 +166,11 @@ private struct FCSwitchButtonSwiftUIView: View {
         }
       )
     )
-    .tint(Color(config.onColor))
-    .disabled(!config.isEnabled)
-    if config.label.isEmpty {
+    .tint(Color(viewModel.config.onColor))
+    .disabled(!viewModel.config.isEnabled)
+    .environment(\.colorScheme, viewModel.brightness == "dark" ? .dark : .light)
+
+    if viewModel.config.label.isEmpty {
       toggle
         .labelsHidden()
         .frame(maxWidth: .infinity, maxHeight: .infinity)

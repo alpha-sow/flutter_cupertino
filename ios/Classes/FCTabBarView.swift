@@ -30,6 +30,7 @@ class FCTabBarFactory: NSObject, FlutterPlatformViewFactory {
 class FCTabBarView: NSObject, FlutterPlatformView {
   private var hostingController: UIHostingController<AnyView>
   private var channel: FlutterMethodChannel
+  private var tabBarViewModel: Any?
 
   init(
     frame: CGRect,
@@ -45,8 +46,10 @@ class FCTabBarView: NSObject, FlutterPlatformView {
     let config = Self.parseArguments(args)
 
     if #available(iOS 18.0, *) {
+      let viewModel = FCTabBarViewModel(config: config)
+      tabBarViewModel = viewModel
       let tabBarView = FCTabBarSwiftUIView(
-        config: config,
+        viewModel: viewModel,
         onTabSelected: { [weak channel] index in
           channel?.invokeMethod("onTabSelected", arguments: index)
         }
@@ -59,10 +62,36 @@ class FCTabBarView: NSObject, FlutterPlatformView {
     hostingController.view.backgroundColor = .clear
 
     super.init()
+
+    // Set up method call handler
+    channel.setMethodCallHandler { [weak self] (call, result) in
+      self?.handleMethodCall(call, result: result)
+    }
   }
 
   func view() -> UIView {
     return hostingController.view
+  }
+
+  private func handleMethodCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    switch call.method {
+    case "updateBrightness":
+      if #available(iOS 18.0, *) {
+        if let args = call.arguments as? [String: Any],
+          let brightness = args["brightness"] as? String,
+          let viewModel = tabBarViewModel as? FCTabBarViewModel
+        {
+          viewModel.updateBrightness(brightness)
+          result(nil)
+        } else {
+          result(FlutterError(code: "INVALID_ARGS", message: "Invalid arguments", details: nil))
+        }
+      } else {
+        result(FlutterMethodNotImplemented)
+      }
+    default:
+      result(FlutterMethodNotImplemented)
+    }
   }
 
   // MARK: - Argument Parsing
@@ -96,6 +125,7 @@ class FCTabBarView: NSObject, FlutterPlatformView {
       }
 
       config.isTranslucent = args["isTranslucent"] as? Bool ?? config.isTranslucent
+      config.brightness = args["brightness"] as? String ?? config.brightness
     }
 
     return config
@@ -119,6 +149,26 @@ private struct FCTabBarConfiguration {
   var selectedTintColor: UIColor?
   var unselectedTintColor: UIColor?
   var isTranslucent: Bool = true
+  var brightness: String = "light"
+}
+
+// MARK: - ViewModel
+
+@available(iOS 18.0, *)
+private class FCTabBarViewModel: ObservableObject {
+  @Published var brightness: String
+  let config: FCTabBarConfiguration
+
+  init(config: FCTabBarConfiguration) {
+    self.config = config
+    self.brightness = config.brightness
+  }
+
+  func updateBrightness(_ brightness: String) {
+    DispatchQueue.main.async {
+      self.brightness = brightness
+    }
+  }
 }
 
 // MARK: - SwiftUI View
@@ -126,13 +176,13 @@ private struct FCTabBarConfiguration {
 @available(iOS 18.0, *)
 private struct FCTabBarSwiftUIView: View {
   @State private var selectedIndex: Int
-  let config: FCTabBarConfiguration
+  @ObservedObject var viewModel: FCTabBarViewModel
   let onTabSelected: (Int) -> Void
 
-  init(config: FCTabBarConfiguration, onTabSelected: @escaping (Int) -> Void) {
-    self.config = config
+  init(viewModel: FCTabBarViewModel, onTabSelected: @escaping (Int) -> Void) {
+    self.viewModel = viewModel
     self.onTabSelected = onTabSelected
-    self._selectedIndex = State(initialValue: config.selectedIndex)
+    self._selectedIndex = State(initialValue: viewModel.config.selectedIndex)
   }
 
   var body: some View {
@@ -145,7 +195,7 @@ private struct FCTabBarSwiftUIView: View {
         }
       )
     ) {
-      ForEach(Array(config.items.enumerated()), id: \.offset) { index, item in
+      ForEach(Array(viewModel.config.items.enumerated()), id: \.offset) { index, item in
         if item.role == "search" {
           Tab(value: index, role: .search) {
             Color.clear
@@ -169,7 +219,8 @@ private struct FCTabBarSwiftUIView: View {
         }
       }
     }
-    .tint(config.selectedTintColor.map { Color($0) })
+    .tint(viewModel.config.selectedTintColor.map { Color($0) })
+    .environment(\.colorScheme, viewModel.brightness == "dark" ? .dark : .light)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
   }
 }

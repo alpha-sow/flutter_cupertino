@@ -35,6 +35,21 @@ class TabBarState: ObservableObject {
   }
 }
 
+// ViewModel for brightness management
+class FCTabBarViewModel: ObservableObject {
+  @Published var brightness: String
+
+  init(brightness: String) {
+    self.brightness = brightness
+  }
+
+  func updateBrightness(_ brightness: String) {
+    DispatchQueue.main.async {
+      self.brightness = brightness
+    }
+  }
+}
+
 // SwiftUI Tab Bar View
 struct FCTabBarSwiftUIView: View {
   let items: [[String: Any?]]
@@ -43,6 +58,7 @@ struct FCTabBarSwiftUIView: View {
   let backgroundColor: Color?
   let selectedTintColor: Color?
   let unselectedTintColor: Color?
+  @ObservedObject var viewModel: FCTabBarViewModel
   let onTabSelected: (Int) -> Void
 
   var body: some View {
@@ -53,6 +69,7 @@ struct FCTabBarSwiftUIView: View {
     }
     .padding(.horizontal, 8)
     .background(backgroundColor?.opacity(0.1) ?? Color.clear)
+    .environment(\.colorScheme, viewModel.brightness == "dark" ? .dark : .light)
   }
 
   private func tabItem(for index: Int) -> some View {
@@ -91,6 +108,7 @@ class FCTabBarView: NSObject {
   private var hostingView: NSHostingView<FCTabBarSwiftUIView>
   private var channel: FlutterMethodChannel
   private var tabBarState: TabBarState
+  private var viewModel: FCTabBarViewModel
 
   init(
     viewIdentifier viewId: Int64,
@@ -110,11 +128,13 @@ class FCTabBarView: NSObject {
     var backgroundColor: Color?
     var selectedTintColor: Color?
     var unselectedTintColor: Color?
+    var brightness = "light"
 
     if let args = args as? [String: Any] {
       items = args["items"] as? [[String: Any?]] ?? items
       selectedIndex = args["selectedIndex"] as? Int ?? selectedIndex
       style = args["style"] as? String ?? style
+      brightness = args["brightness"] as? String ?? brightness
 
       if let bgColorValue = args["backgroundColor"] as? Int {
         backgroundColor = Color(NSColor(argb: bgColorValue))
@@ -128,6 +148,7 @@ class FCTabBarView: NSObject {
     }
 
     tabBarState = TabBarState(selectedIndex: selectedIndex)
+    viewModel = FCTabBarViewModel(brightness: brightness)
 
     // Create SwiftUI view
     let swiftUIView = FCTabBarSwiftUIView(
@@ -136,7 +157,8 @@ class FCTabBarView: NSObject {
       style: style,
       backgroundColor: backgroundColor,
       selectedTintColor: selectedTintColor,
-      unselectedTintColor: unselectedTintColor
+      unselectedTintColor: unselectedTintColor,
+      viewModel: viewModel
     ) { [weak channel] index in
       channel?.invokeMethod("onTabSelected", arguments: index)
     }
@@ -144,6 +166,11 @@ class FCTabBarView: NSObject {
     hostingView = NSHostingView(rootView: swiftUIView)
 
     super.init()
+
+    // Set up method call handler
+    channel.setMethodCallHandler { [weak self] (call, result) in
+      self?.handleMethodCall(call, result: result)
+    }
 
     // Add hosting view
     hostingView.translatesAutoresizingMaskIntoConstraints = false
@@ -155,5 +182,20 @@ class FCTabBarView: NSObject {
       hostingView.topAnchor.constraint(equalTo: view.topAnchor),
       hostingView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
     ])
+  }
+
+  private func handleMethodCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    switch call.method {
+    case "updateBrightness":
+      if let args = call.arguments as? [String: Any],
+         let brightness = args["brightness"] as? String {
+        viewModel.updateBrightness(brightness)
+        result(nil)
+      } else {
+        result(FlutterError(code: "INVALID_ARGS", message: "Invalid arguments", details: nil))
+      }
+    default:
+      result(FlutterMethodNotImplemented)
+    }
   }
 }

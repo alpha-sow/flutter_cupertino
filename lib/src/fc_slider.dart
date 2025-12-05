@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 // ignore: unused_import, provides Color.toARGB32() extension
 import 'package:flutter_cupertino/src/utilities.dart';
@@ -85,6 +85,7 @@ class FCSlider extends StatefulWidget {
 class _FCSliderState extends State<FCSlider> {
   MethodChannel? _channel;
   double? _lastValue;
+  Brightness? _lastBrightness;
 
   @override
   void dispose() {
@@ -100,10 +101,17 @@ class _FCSliderState extends State<FCSlider> {
     }
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    unawaited(_syncBrightnessIfNeeded());
+  }
+
   void _onPlatformViewCreated(int id) {
     _channel = MethodChannel('flutter_cupertino/fc_slider_$id');
     _channel!.setMethodCallHandler(_onMethodCall);
     _lastValue = widget.value;
+    _lastBrightness = CupertinoTheme.brightnessOf(context);
   }
 
   Future<void> _updateNativeValue(double value) async {
@@ -121,6 +129,24 @@ class _FCSliderState extends State<FCSlider> {
     }
   }
 
+  Future<void> _syncBrightnessIfNeeded() async {
+    final ch = _channel;
+    if (ch == null) return;
+    final brightness = CupertinoTheme.brightnessOf(context);
+    if (_lastBrightness != brightness) {
+      _lastBrightness = brightness;
+      try {
+        await ch.invokeMethod('updateBrightness', {
+          'brightness': brightness == Brightness.dark ? 'dark' : 'light',
+        });
+      } on Exception catch (e) {
+        if (kDebugMode) {
+          print('FCSlider: Failed to update brightness: $e');
+        }
+      }
+    }
+  }
+
   Future<dynamic> _onMethodCall(MethodCall call) async {
     if (call.method == 'valueChanged') {
       final args = call.arguments as Map?;
@@ -134,6 +160,7 @@ class _FCSliderState extends State<FCSlider> {
   }
 
   Map<String, dynamic> _getCreationParams() {
+    final brightness = CupertinoTheme.brightnessOf(context);
     return {
       'value': widget.value,
       'minimumValue': widget.minimumValue,
@@ -144,6 +171,7 @@ class _FCSliderState extends State<FCSlider> {
       'maximumTrackTintColor': widget.maximumTrackTintColor?.toARGB32(),
       'thumbTintColor': widget.thumbTintColor?.toARGB32(),
       'isContinuous': widget.isContinuous,
+      'brightness': brightness == Brightness.dark ? 'dark' : 'light',
     };
   }
 
