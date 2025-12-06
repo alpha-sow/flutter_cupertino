@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/alpha-sow/flutter_cupertino/compare/v1.1.0...v1.2.0) (2025-12-06)
+
+
+### Features
+
+* use theme color ([9d16300](https://github.com/alpha-sow/flutter_cupertino/commit/9d16300eaa3c2bcf839d10363efeef32363208be))
+
 # [1.1.0](https://github.com/alpha-sow/flutter_cupertino/compare/v1.0.3...v1.1.0) (2025-12-05)
 
 
