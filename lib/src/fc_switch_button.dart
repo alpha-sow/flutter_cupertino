@@ -115,11 +115,11 @@ class _FCSwitchButtonState extends State<FCSwitchButton> {
 
   Map<String, dynamic> _getCreationParams() {
     final brightness = CupertinoTheme.brightnessOf(context);
+    final primaryColor = CupertinoTheme.of(context).primaryColor;
     return {
       'label': widget.label ?? '',
       'isOn': widget.isOn,
-      'onColor':
-          widget.onColor?.toARGB32() ?? CupertinoColors.systemBlue.toARGB32(),
+      'onColor': widget.onColor?.toARGB32() ?? primaryColor.toARGB32(),
       'isEnabled': widget.isEnabled,
       'brightness': brightness == Brightness.dark ? 'dark' : 'light',
     };

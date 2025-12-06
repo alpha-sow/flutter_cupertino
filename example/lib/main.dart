@@ -34,7 +34,7 @@ class _MyAppState extends State<MyApp> {
     return CupertinoApp(
       title: 'Flutter Cupertino Example',
       theme: CupertinoThemeData(
-        primaryColor: CupertinoColors.systemBlue,
+        primaryColor: CupertinoColors.systemYellow,
         brightness: _themeMode,
       ),
       home: HomePage(
@@ -152,13 +152,10 @@ class HomePage extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     return CupertinoListTile(
-      leading: Icon(icon, color: CupertinoColors.systemBlue),
+      leading: Icon(icon),
       title: Text(title),
       subtitle: Text(subtitle),
-      trailing: const Icon(
-        CupertinoIcons.chevron_right,
-        color: CupertinoColors.systemGrey,
-      ),
+      trailing: const Icon(CupertinoIcons.chevron_right),
       onTap: onTap,
     );
   }

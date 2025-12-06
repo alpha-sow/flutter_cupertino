@@ -161,13 +161,13 @@ class _FCSliderState extends State<FCSlider> {
 
   Map<String, dynamic> _getCreationParams() {
     final brightness = CupertinoTheme.brightnessOf(context);
+    final primaryColor = CupertinoTheme.of(context).primaryColor;
     return {
       'value': widget.value,
       'minimumValue': widget.minimumValue,
       'maximumValue': widget.maximumValue,
       'minimumTrackTintColor':
-          widget.minimumTrackTintColor?.toARGB32() ??
-          const Color(0xFF007AFF).toARGB32(),
+          widget.minimumTrackTintColor?.toARGB32() ?? primaryColor.toARGB32(),
       'maximumTrackTintColor': widget.maximumTrackTintColor?.toARGB32(),
       'thumbTintColor': widget.thumbTintColor?.toARGB32(),
       'isContinuous': widget.isContinuous,

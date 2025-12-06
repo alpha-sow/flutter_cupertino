@@ -164,10 +164,12 @@ class _FCButtonState extends State<FCButton> {
 
   Map<String, dynamic> _getCreationParams() {
     final brightness = CupertinoTheme.brightnessOf(context);
+    final primaryColor = CupertinoTheme.of(context).primaryColor;
     return {
       'title': widget.title,
       'style': widget.style.name,
-      'backgroundColor': widget.backgroundColor?.toARGB32(),
+      'backgroundColor':
+          widget.backgroundColor?.toARGB32() ?? primaryColor.toARGB32(),
       'foregroundColor': widget.foregroundColor?.toARGB32(),
       'fontSize': widget.fontSize,
       'isEnabled': widget.isEnabled && widget.onPressed != null,

@@ -218,12 +218,14 @@ class _FCTabBarState extends State<FCTabBar> {
 
   Map<String, dynamic> _getCreationParams(BuildContext context) {
     final brightness = CupertinoTheme.brightnessOf(context);
+    final primaryColor = CupertinoTheme.of(context).primaryColor;
     return {
       'items': widget.items.map((item) => item.toMap()).toList(),
       'selectedIndex': widget.selectedIndex,
       'style': widget.style.name,
       'backgroundColor': widget.backgroundColor?.toARGB32(),
-      'selectedTintColor': widget.selectedTintColor?.toARGB32(),
+      'selectedTintColor':
+          widget.selectedTintColor?.toARGB32() ?? primaryColor.toARGB32(),
       'unselectedTintColor': widget.unselectedTintColor?.toARGB32(),
       'isTranslucent': widget.isTranslucent,
       'brightness': brightness == Brightness.dark ? 'dark' : 'light',
